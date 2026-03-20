@@ -1,5 +1,6 @@
 ﻿resource "aws_security_group" "rds_sg" {
   name        = "${var.project_name}-rds-sg"
+  description = "Permite acesso ao Postgres"
   vpc_id      = var.vpc_id
 
   ingress {
