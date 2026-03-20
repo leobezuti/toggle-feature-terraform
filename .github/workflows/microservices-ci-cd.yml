@@ -153,6 +153,9 @@ jobs:
               re.MULTILINE,
           )
           updated, count = pattern.subn(rf"\1{image_uri}", content, count=1)
+            if count == 0:
+              fallback = re.compile(r"(containers:\s*\n(?:[ \t].*\n)*?[ \t]+image:\s*)([^\n]+)", re.MULTILINE)
+              updated, count = fallback.subn(rf"\1{image_uri}", content, count=1)
           if count == 0:
               print(f"Could not find image field for container '{container_name}' in {deployment_file}")
               sys.exit(1)
