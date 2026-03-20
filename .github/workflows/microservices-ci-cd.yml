@@ -112,7 +112,7 @@ jobs:
           SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-12)"
           TAG="sha-${SHORT_SHA}"
           DEPLOYMENT_FILE="Kubernetes/${SERVICE}/deployment.yml"
-          REPOSITORY="toggle-feature/${SERVICE}"
+          REPOSITORY="${SERVICE}"
           CONTAINER_NAME="${SERVICE}"
 
           IMAGE_URI="${ECR_REGISTRY}/${REPOSITORY}:${TAG}"

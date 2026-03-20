@@ -96,7 +96,7 @@ variable "github_repository" {
 
 variable "github_branch" {
   type        = string
-  default     = "master"
+  default     = "main"
 }
 
 variable "github_oidc_provider_arn" {
