@@ -1,0 +1,177 @@
+name: Microservices CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Microservices/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+concurrency:
+  group: microservices-cicd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.collect.outputs.has_changes }}
+      matrix: ${{ steps.collect.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed services
+        id: collect
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.before }}"
+          if [ -z "${BASE_SHA}" ] || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "${BASE_SHA}" "${{ github.sha }}")"
+          echo "Changed files:"
+          echo "${CHANGED_FILES}"
+
+          ALL_SERVICES="analytics-service auth-service evaluation-service flag-service targeting-service"
+          declare -A SELECTED=()
+
+          while IFS= read -r file; do
+            [ -z "${file}" ] && continue
+            for svc in ${ALL_SERVICES}; do
+              if [[ "${file}" == Microservices/${svc}/* ]]; then
+                SELECTED["${svc}"]=1
+              fi
+            done
+            if [[ "${file}" == "Microservices/docker-compose.yml" ]]; then
+              for svc in ${ALL_SERVICES}; do
+                SELECTED["${svc}"]=1
+              done
+            fi
+          done <<< "${CHANGED_FILES}"
+
+          SERVICES=()
+          for svc in ${ALL_SERVICES}; do
+            if [[ -n "${SELECTED[$svc]:-}" ]]; then
+              SERVICES+=("${svc}")
+            fi
+          done
+
+          if [ "${#SERVICES[@]}" -eq 0 ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "matrix={\"service\":[]}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          MATRIX_JSON="$(printf '%s\n' "${SERVICES[@]}" | python -c 'import json,sys; arr=[x.strip() for x in sys.stdin if x.strip()]; print(json.dumps({"service": arr}))')"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          echo "matrix=${MATRIX_JSON}" >> "$GITHUB_OUTPUT"
+
+  build-push-and-update-manifest:
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Resolve image metadata
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          SERVICE="${{ matrix.service }}"
+          SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-12)"
+          TAG="sha-${SHORT_SHA}"
+          DEPLOYMENT_FILE="Kubernetes/${SERVICE}/deployment.yml"
+          REPOSITORY="toggle-feature/${SERVICE}"
+          CONTAINER_NAME="${SERVICE}"
+
+          IMAGE_URI="${ECR_REGISTRY}/${REPOSITORY}:${TAG}"
+
+          echo "service=${SERVICE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "repository=${REPOSITORY}" >> "$GITHUB_OUTPUT"
+          echo "deployment_file=${DEPLOYMENT_FILE}" >> "$GITHUB_OUTPUT"
+          echo "container_name=${CONTAINER_NAME}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            -t "${{ steps.image.outputs.image_uri }}" \
+            "Microservices/${{ steps.image.outputs.service }}"
+          docker push "${{ steps.image.outputs.image_uri }}"
+
+      - name: Update Kubernetes deployment image
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+          import os
+
+          deployment_file = pathlib.Path(os.environ["DEPLOYMENT_FILE"])
+          container_name = os.environ["CONTAINER_NAME"]
+          image_uri = os.environ["IMAGE_URI"]
+
+          content = deployment_file.read_text(encoding="utf-8")
+          pattern = re.compile(
+              rf"(-\s+name:\s*{re.escape(container_name)}\s*\n(?:[ \t].*\n)*?[ \t]+image:\s*)([^\n]+)",
+              re.MULTILINE,
+          )
+          updated, count = pattern.subn(rf"\1{image_uri}", content, count=1)
+          if count == 0:
+              print(f"Could not find image field for container '{container_name}' in {deployment_file}")
+              sys.exit(1)
+          deployment_file.write_text(updated, encoding="utf-8")
+          PY
+        env:
+          DEPLOYMENT_FILE: ${{ steps.image.outputs.deployment_file }}
+          CONTAINER_NAME: ${{ steps.image.outputs.container_name }}
+          IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+
+      - name: Commit and push manifest change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ steps.image.outputs.deployment_file }}"
+          if git diff --cached --quiet; then
+            echo "No manifest updates to commit."
+            exit 0
+          fi
+          git commit -m "ci: update ${{ steps.image.outputs.service }} image to ${{ steps.image.outputs.tag }}"
+          git push
