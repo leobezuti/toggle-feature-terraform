@@ -2,13 +2,26 @@ provider "aws" {
   region = var.aws_region
 }
 
-module "eks_cluster" {
-  source = "../../modules/eks"
+data "terraform_remote_state" "global_vpc" {
+  backend = "s3"
 
-  vpc_name           = var.vpc_name
-  vpc_cidr           = var.vpc_cidr
-  public_subnets     = var.public_subnets
-  private_subnets    = var.private_subnets
-  enable_nat_gateway = var.enable_nat_gateway
-  tags               = var.tags
+  config = {
+    bucket = "toggle-feature-terraform-state"
+    key    = "global/vpc/terraform.tfstate"
+    region = var.aws_region
+  }
+}
+
+module "eks_cluster" {
+  source = "../../../modules/eks"
+
+  cluster_name                  = var.cluster_name
+  subnet_ids                    = data.terraform_remote_state.global_vpc.outputs.private_subnet_ids_list
+  enable_elastic_load_balancing = var.enable_elastic_load_balancing
+  node_group_name               = var.node_group_name
+  instance_type                 = var.instance_type
+  desired_size                  = var.desired_size
+  min_size                      = var.min_size
+  max_size                      = var.max_size
+  tags                          = var.tags
 }

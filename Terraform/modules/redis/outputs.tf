@@ -19,19 +19,19 @@ output "cluster_id" {
 # Endpoint de leitura/escrita do Replication Group
 output "replication_group_primary_endpoint_address" {
   description = "Endereço do endpoint primário do replication group"
-  value       = try(aws_elasticache_replication_group.redis_ha.primary_endpoint_address, null)
+  value       = null
 }
 
 # Endpoint de leitura do Replication Group
 output "replication_group_reader_endpoint_address" {
   description = "Endereço do endpoint leitor do replication group"
-  value       = try(aws_elasticache_replication_group.redis_ha.reader_endpoint_address, null)
+  value       = null
 }
 
 # ID do Replication Group
 output "replication_group_id" {
   description = "ID do replication group"
-  value       = try(aws_elasticache_replication_group.redis_ha.id, null)
+  value       = null
 }
 
 # Subnet Group

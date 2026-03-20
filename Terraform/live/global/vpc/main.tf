@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 module "global_vpc" {
-  source = "../../modules/vpc"
+  source = "../../../modules/vpc"
 
   vpc_name           = var.vpc_name
   vpc_cidr           = var.vpc_cidr

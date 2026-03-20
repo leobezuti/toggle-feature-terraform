@@ -2,6 +2,16 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "terraform_remote_state" "global_vpc" {
+  backend = "s3"
+
+  config = {
+    bucket = "toggle-feature-terraform-state"
+    key    = "global/vpc/terraform.tfstate"
+    region = var.aws_region
+  }
+}
+
 module "evaluation_service_sqs" {
   source = "../../modules/sqs"
 
@@ -18,9 +28,9 @@ module "evaluation_service_rds" {
   source = "../../modules/rds"
 
   project_name       = var.project_name
-  vpc_id             = var.vpc_id
-  vpc_cidr           = var.vpc_cidr
-  private_subnet_ids = var.private_subnet_ids
+  vpc_id             = data.terraform_remote_state.global_vpc.outputs.vpc_id
+  vpc_cidr           = data.terraform_remote_state.global_vpc.outputs.vpc_cidr_block
+  private_subnet_ids = data.terraform_remote_state.global_vpc.outputs.private_subnet_ids_list
   db_identifier      = var.db_identifier
   db_name            = var.db_name
   db_username        = var.db_username
@@ -42,6 +52,6 @@ module "evaluation_service_redis" {
   parameter_group_name    = var.parameter_group_name
   engine_version          = var.engine_version
   port                    = var.port
-  subnet_group_name = ""
-  security_group_ids = []
+  subnet_group_name       = "${var.cluster_name}-subnet-group"
+  security_group_ids      = data.terraform_remote_state.global_vpc.outputs.private_subnet_ids_list
 }

@@ -12,6 +12,7 @@ variable "cluster_name" {
 variable "subnet_ids" {
   description = "List of subnet IDs for the EKS cluster"
   type        = list(string)
+  default     = null
 }
 
 variable "enable_elastic_load_balancing" {

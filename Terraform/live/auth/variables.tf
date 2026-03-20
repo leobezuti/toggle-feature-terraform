@@ -4,9 +4,7 @@ variable "aws_region" {
 }
 
 variable "project_name" { type = string }
-variable "vpc_id" { type = string }
-variable "vpc_cidr" { type = string }
-variable "private_subnet_ids" { type = list(string) }
 variable "db_identifier" { type = string }
 variable "db_name" { type = string }
-variable "db_username" { type = string }         
+variable "db_username" { type = string }   
+variable "tags" { type = map(string) }

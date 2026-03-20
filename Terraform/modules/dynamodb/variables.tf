@@ -44,6 +44,18 @@ variable "point_in_time_recovery_enabled" {
   default     = false
 }
 
+variable "stream_specification" {
+  description = "DynamoDB stream settings."
+  type = object({
+    stream_enabled   = bool
+    stream_view_type = string
+  })
+  default = {
+    stream_enabled   = false
+    stream_view_type = "NEW_AND_OLD_IMAGES"
+  }
+}
+
 variable "tags" {
   description = "Tags para os recursos"
   type        = map(string)

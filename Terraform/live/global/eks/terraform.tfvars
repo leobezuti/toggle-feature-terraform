@@ -1,5 +1,4 @@
 cluster_name = "toggle-feature-eks-cluster"
-subnet_ids = module.global_vpc.private_subnet_ids_list
 
 enable_elastic_load_balancing = false
 

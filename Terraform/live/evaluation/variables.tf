@@ -3,21 +3,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC"
-  type        = string
-}
-
-variable "vpc_cidr" {
-  description = "CIDR block of the VPC"
-  type        = string
-}
-
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs"
-  type        = list(string)
-}
-
 variable "tags" {
   description = "Tags para os recursos"
   type        = map(string)
