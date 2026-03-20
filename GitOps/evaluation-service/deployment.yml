@@ -14,8 +14,7 @@ spec:
         app: evaluation-service
     spec:
       containers:
-        - name: evaluation-service
-          image: 550829113486.dkr.ecr.us-east-1.amazonaws.com/evaluation-service:latest
+        m0829113486.dkr.ecr.us-east-1.amazonaws.com/evaluation-service:sha-42306ee98305
           imagePullPolicy: IfNotPresent
           resources:
             requests:
