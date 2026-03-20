@@ -9,16 +9,13 @@ from dotenv import load_dotenv
 from functools import wraps
 import logging
 
-# Configura o logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-# Carrega .env para desenvolvimento local
-load_dotenv() 
+load_dotenv()
 
 app = Flask(__name__)
 
-# --- Configuração ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL")
 
@@ -26,8 +23,6 @@ if not DATABASE_URL or not AUTH_SERVICE_URL:
     log.critical("Erro: DATABASE_URL e AUTH_SERVICE_URL devem ser definidos.")
     sys.exit(1)
 
-# --- Pool de Conexão com o Banco ---
-# Inicializa o pool de conexões (Mín: 1, Máx: 5 conexões)
 try:
     pool = SimpleConnectionPool(1, 5, dsn=DATABASE_URL)
     log.info("Pool de conexões com o PostgreSQL inicializado.")
@@ -35,17 +30,14 @@ except psycopg2.OperationalError as e:
     log.critical(f"Erro fatal ao conectar ao PostgreSQL: {e}")
     sys.exit(1)
 
-# --- Middleware de Autenticação ---
 def require_auth(f):
-    """ Middleware para validar a chave de API contra o auth-service """
     @wraps(f)
     def decorated(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             return jsonify({"error": "Authorization header obrigatório"}), 401
-        
+
         try:
-            # Chama o /validate do auth-service
             validate_url = f"{AUTH_SERVICE_URL}/validate"
             response = requests.get(validate_url, headers={"Authorization": auth_header}, timeout=3)
             
