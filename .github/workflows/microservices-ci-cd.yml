@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: microservices-cicd-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   AWS_REGION: us-east-1
