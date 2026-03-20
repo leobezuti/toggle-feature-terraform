@@ -14,8 +14,7 @@ spec:
         app: flag-service
     spec:
       containers:
-        - name: flag-service
-          image: 935451498002.dkr.ecr.us-east-1.amazonaws.com/toggle-feature/flag-service:1.0.0
+        m0829113486.dkr.ecr.us-east-1.amazonaws.com/flag-service:sha-9bff6f9fc7ae
           imagePullPolicy: IfNotPresent
           resources:
             requests:
