@@ -14,8 +14,7 @@ spec:
         app: auth-service
     spec:
       containers:
-        - name: auth-service
-          image: 550829113486.dkr.ecr.us-east-1.amazonaws.com/auth-service:latest
+        m0829113486.dkr.ecr.us-east-1.amazonaws.com/auth-service:sha-42306ee98305
           imagePullPolicy: IfNotPresent
           resources:
             requests:
