@@ -1,6 +1,6 @@
 # auth-service (Go)
 
-Modificação teste
+Modificação teste2
 
 Este é o serviço de autenticação do projeto ToggleMaster. Ele é responsável por criar e validar chaves de API.
 
