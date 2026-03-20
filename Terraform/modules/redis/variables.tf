@@ -10,8 +10,9 @@ variable "elasticache_description" {
 }
 
 variable "replication_group_id" {
-  description = "ID do grupo de replicação"
+  description = "ID do grupo de replicação (opcional, usado para replication group)"
   type        = string
+  default     = null
 }
 
 variable "engine" {
@@ -55,8 +56,8 @@ variable "subnet_group_name" {
   type        = string
 }
 
-variable "security_group_ids" {
-  description = "Lista de security groups"
+variable "subnet_ids" {
+  description = "Lista de subnet IDs"
   type        = list(string)
 }
 

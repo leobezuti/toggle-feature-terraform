@@ -3,6 +3,11 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "cluster_role_arn" {
+  description = "ARN of the IAM role for the EKS cluster"
+  type        = string
+}
+
 variable "subnet_ids" {
   description = "List of subnet IDs for the EKS cluster"
   type        = list(string)
@@ -18,6 +23,11 @@ variable "node_group_name" {
   description = "Name of the node group"
   type        = string
   default     = "default"
+}
+
+variable "node_role_arn" {
+  description = "ARN of the IAM role for the node group"
+  type        = string
 }
 
 variable "instance_type" {
@@ -42,6 +52,12 @@ variable "max_size" {
   description = "Maximum number of worker nodes"
   type        = number
   default     = 3
+}
+
+variable "capacity_type" {
+  description = "Capacity type for node group (ON_DEMAND or SPOT)"
+  type        = string
+  default     = "SPOT"
 }
 
 variable "tags" {
