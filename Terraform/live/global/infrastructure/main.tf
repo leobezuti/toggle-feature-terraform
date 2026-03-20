@@ -1,4 +1,4 @@
-terraform {
+﻿terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -17,6 +17,76 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+}
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_iam_openid_connect_provider" "github_actions" {
+  count = var.github_oidc_provider_arn == "" ? 1 : 0
+
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+
+locals {
+  github_oidc_provider_arn = var.github_oidc_provider_arn != "" ? var.github_oidc_provider_arn : aws_iam_openid_connect_provider.github_actions[0].arn
+}
+
+resource "aws_iam_role" "github_actions" {
+  name = "toggle-feature-github-actions-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = local.github_oidc_provider_arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
+        }
+      }
+    }]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy" "github_actions_ecr" {
+  name = "toggle-feature-github-actions-ecr-policy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:PutImage",
+          "ecr:BatchGetImage",
+          "ecr:DescribeRepositories"
+        ]
+        Resource = "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/*"
+      }
+    ]
+  })
 }
 
 provider "helm" {
@@ -41,7 +111,6 @@ provider "kubectl" {
   }
 }
 
-# VPC Module
 module "vpc" {
   source = "../../../modules/vpc"
 
@@ -53,7 +122,6 @@ module "vpc" {
   tags               = var.tags
 }
 
-# IAM Roles for EKS
 resource "aws_iam_role" "eks_cluster_role" {
   name = "${var.cluster_name}-cluster-role"
 
@@ -108,7 +176,6 @@ resource "aws_iam_role_policy_attachment" "ec2_container_registry_readonly" {
   role       = aws_iam_role.eks_node_role.name
 }
 
-# EKS Module
 module "eks" {
   source = "../../../modules/eks"
 
@@ -124,7 +191,6 @@ module "eks" {
   capacity_type                  = "SPOT"
 }
 
-# RDS Instances (3 PostgreSQL)
 module "rds_auth" {
   source = "../../../modules/rds"
 
@@ -173,7 +239,6 @@ module "rds_targeting" {
   tags               = var.tags
 }
 
-# Redis Cluster
 module "redis" {
   source = "../../../modules/redis"
 
@@ -189,7 +254,6 @@ module "redis" {
   tags = var.tags
 }
 
-# DynamoDB Table
 module "dynamodb" {
   source = "../../../modules/dynamodb"
 
@@ -206,7 +270,6 @@ module "dynamodb" {
   tags = var.tags
 }
 
-# SQS Queue
 module "sqs" {
   source = "../../../modules/sqs"
 
@@ -219,7 +282,6 @@ module "sqs" {
   tags                        = var.tags
 }
 
-# ECR Repositories
 module "ecr" {
   source = "../../../modules/ecr"
 
@@ -233,7 +295,6 @@ module "ecr" {
   tags = var.tags
 }
 
-# ArgoCD Installation
 resource "helm_release" "argocd" {
   name       = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
@@ -252,6 +313,3 @@ resource "helm_release" "argocd" {
   ]
 }
 
-# ArgoCD Applications are managed via GitOps (external Git repository configured in ArgoCD UI or CLI).
-# Keep GitOps manifests in GitOps/argocd/ and let ArgoCD sync them.
-# Terraform only deploys the ArgoCD platform here.

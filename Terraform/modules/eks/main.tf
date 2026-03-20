@@ -1,4 +1,4 @@
-resource "aws_eks_cluster" "cluster" {
+﻿resource "aws_eks_cluster" "cluster" {
   name     = var.cluster_name
   role_arn = var.cluster_role_arn
 
@@ -8,11 +8,8 @@ resource "aws_eks_cluster" "cluster" {
   }
 
   kubernetes_network_config {
-    # this block is supported for providers around 5.0+ and avoids the "unsupported block type" error
   }
 
-  # If your provider supports it, use the non-required sub-block.
-  # Here, we keep it simple and guarantee compatibility.
 
   compute_config {
     enabled = false

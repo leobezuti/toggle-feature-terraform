@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Flag Service
+﻿name: CI/CD Pipeline for Flag Service
 
 on:
   push:

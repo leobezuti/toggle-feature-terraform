@@ -1,4 +1,4 @@
-resource "aws_ecr_repository" "repo" {
+﻿resource "aws_ecr_repository" "repo" {
   for_each = toset(var.repository_names)
 
   name                 = each.value
@@ -19,7 +19,6 @@ resource "aws_ecr_lifecycle_policy" "policy" {
   policy = jsonencode({
     rules = [{
       rulePriority = 1
-      description  = "Keep last 10 images"
       selection = {
         tagStatus   = "any"
         countType   = "imageCountMoreThan"

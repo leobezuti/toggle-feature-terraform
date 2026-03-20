@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import psycopg2
 import requests
@@ -25,7 +25,7 @@ if not DATABASE_URL or not AUTH_SERVICE_URL:
 
 try:
     pool = SimpleConnectionPool(1, 5, dsn=DATABASE_URL)
-    log.info("Pool de conexões com o PostgreSQL inicializado.")
+    log.info("Pool de conexÃµes com o PostgreSQL inicializado.")
 except psycopg2.OperationalError as e:
     log.critical(f"Erro fatal ao conectar ao PostgreSQL: {e}")
     sys.exit(1)
@@ -35,28 +35,26 @@ def require_auth(f):
     def decorated(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
         if not auth_header:
-            return jsonify({"error": "Authorization header obrigatório"}), 401
+            return jsonify({"error": "Authorization header obrigatÃ³rio"}), 401
 
         try:
             validate_url = f"{AUTH_SERVICE_URL}/validate"
             response = requests.get(validate_url, headers={"Authorization": auth_header}, timeout=3)
             
             if response.status_code != 200:
-                log.warning(f"Falha na validação da chave (status: {response.status_code})")
-                return jsonify({"error": "Chave de API inválida"}), 401
+                log.warning(f"Falha na validaÃ§Ã£o da chave (status: {response.status_code})")
+                return jsonify({"error": "Chave de API invÃ¡lida"}), 401
         
         except requests.exceptions.Timeout:
             log.error("Timeout ao conectar com o auth-service")
-            return jsonify({"error": "Serviço de autenticação indisponível (timeout)"}), 504 # Gateway Timeout
+            return jsonify({"error": "ServiÃ§o de autenticaÃ§Ã£o indisponÃ­vel (timeout)"}), 504
         except requests.exceptions.RequestException as e:
             log.error(f"Erro ao conectar com o auth-service: {e}")
-            return jsonify({"error": "Serviço de autenticação indisponível"}), 503 # Service Unavailable
+            return jsonify({"error": "ServiÃ§o de autenticaÃ§Ã£o indisponÃ­vel"}), 503
 
-        # Se a chave for válida, continua para a rota
         return f(*args, **kwargs)
     return decorated
 
-# --- Endpoints da API ---
 
 @app.route('/health')
 def health():
@@ -65,10 +63,10 @@ def health():
 @app.route('/flags', methods=['POST'])
 @require_auth
 def create_flag():
-    """ Cria uma nova definição de feature flag """
+    """ Cria uma nova definiÃ§Ã£o de feature flag """
     data = request.get_json()
     if not data or 'name' not in data:
-        return jsonify({"error": "'name' é obrigatório"}), 400
+        return jsonify({"error": "'name' Ã© obrigatÃ³rio"}), 400
     
     name = data['name']
     description = data.get('description', '')
@@ -91,7 +89,7 @@ def create_flag():
     except psycopg2.IntegrityError:
         if conn: conn.rollback()
         log.warning(f"Tentativa de criar flag duplicada: '{name}'")
-        return jsonify({"error": f"Flag '{name}' já existe"}), 409
+        return jsonify({"error": f"Flag '{name}' jÃ¡ existe"}), 409
     except Exception as e:
         if conn: conn.rollback()
         log.error(f"Erro ao criar flag: {e}")
@@ -122,7 +120,7 @@ def get_flags():
 @app.route('/flags/<string:name>', methods=['GET'])
 @require_auth
 def get_flag(name):
-    """ Busca uma feature flag específica pelo nome """
+    """ Busca uma feature flag especÃ­fica pelo nome """
     conn = None
     cur = None
     try:
@@ -131,7 +129,7 @@ def get_flag(name):
         cur.execute("SELECT * FROM flags WHERE name = %s", (name,))
         flag = cur.fetchone()
         if not flag:
-            return jsonify({"error": "Flag não encontrada"}), 404
+            return jsonify({"error": "Flag nÃ£o encontrada"}), 404
         return jsonify(flag)
     except Exception as e:
         log.error(f"Erro ao buscar flag '{name}': {e}")
@@ -143,15 +141,14 @@ def get_flag(name):
 @app.route('/flags/<string:name>', methods=['PUT'])
 @require_auth
 def update_flag(name):
-    """ Atualiza uma feature flag (descrição ou status 'is_enabled') """
+    """ Atualiza uma feature flag (descriÃ§Ã£o ou status 'is_enabled') """
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Corpo da requisição obrigatório"}), 400
+        return jsonify({"error": "Corpo da requisiÃ§Ã£o obrigatÃ³rio"}), 400
 
     fields = []
     values = []
     
-    # Constrói a query dinamicamente
     if 'description' in data:
         fields.append("description = %s")
         values.append(data['description'])
@@ -160,9 +157,9 @@ def update_flag(name):
         values.append(data['is_enabled'])
     
     if not fields:
-        return jsonify({"error": "Pelo menos um campo ('description', 'is_enabled') é obrigatório"}), 400
+        return jsonify({"error": "Pelo menos um campo ('description', 'is_enabled') Ã© obrigatÃ³rio"}), 400
     
-    values.append(name) # Adiciona o 'name' para a cláusula WHERE
+    values.append(name)
     
     query = f"UPDATE flags SET {', '.join(fields)} WHERE name = %s RETURNING *"
     
@@ -174,7 +171,7 @@ def update_flag(name):
         cur.execute(query, tuple(values))
         
         if cur.rowcount == 0:
-            return jsonify({"error": "Flag não encontrada"}), 404
+            return jsonify({"error": "Flag nÃ£o encontrada"}), 404
             
         updated_flag = cur.fetchone()
         conn.commit()
@@ -200,11 +197,11 @@ def delete_flag(name):
         cur.execute("DELETE FROM flags WHERE name = %s", (name,))
         
         if cur.rowcount == 0:
-            return jsonify({"error": "Flag não encontrada"}), 404
+            return jsonify({"error": "Flag nÃ£o encontrada"}), 404
             
         conn.commit()
         log.info(f"Flag '{name}' deletada com sucesso.")
-        return "", 204 # 204 No Content
+        return "", 204
     except Exception as e:
         if conn: conn.rollback()
         log.error(f"Erro ao deletar flag '{name}': {e}")

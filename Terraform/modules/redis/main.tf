@@ -1,12 +1,10 @@
-# Grupo de Subnets para ElastiCache
-resource "aws_elasticache_subnet_group" "redis" {
+﻿resource "aws_elasticache_subnet_group" "redis" {
   name       = var.subnet_group_name
   subnet_ids = var.subnet_ids
 
   tags = merge(var.tags, { Name = "${var.cluster_name}-subnet-group" })
 }
 
-# Cluster de ElastiCache Redis
 resource "aws_elasticache_cluster" "redis" {
   cluster_id           = var.cluster_name
   engine               = var.engine

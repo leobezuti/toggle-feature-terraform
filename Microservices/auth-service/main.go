@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"database/sql"
@@ -35,7 +35,7 @@ func main() {
 
 	db, err := connectDB(databaseURL)
 	if err != nil {
-		log.Fatalf("Não foi possível conectar ao banco de dados: %v", err)
+		log.Fatalf("NÃ£o foi possÃ­vel conectar ao banco de dados: %v", err)
 	}
 	defer db.Close()
 
@@ -44,24 +44,19 @@ func main() {
 		MasterKey:  masterKey,
 	}
 
-	// --- Rotas da API ---
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", app.healthHandler)
 
-	// Endpoint público para validar uma chave
 	mux.HandleFunc("/validate", app.validateKeyHandler)
 
-	// Endpoints de "admin" para criar/gerenciar chaves
-	// Eles são protegidos pelo middleware de autenticação
 	mux.Handle("/admin/keys", app.masterKeyAuthMiddleware(http.HandlerFunc(app.createKeyHandler)))
 
-	log.Printf("Serviço de Autenticação (Go) rodando na porta %s", port)
+	log.Printf("ServiÃ§o de AutenticaÃ§Ã£o (Go) rodando na porta %s", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// connectDB inicializa e testa a conexão com o PostgreSQL
 func connectDB(databaseURL string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", databaseURL)
 	if err != nil {

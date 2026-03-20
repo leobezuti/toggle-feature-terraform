@@ -1,5 +1,4 @@
-variable "aws_region" {
-  description = "AWS region to deploy resources"
+﻿variable "aws_region" {
   type        = string
 }
 

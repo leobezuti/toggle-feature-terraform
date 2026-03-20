@@ -1,4 +1,4 @@
-terraform {
+﻿terraform {
   backend "s3" {
     bucket         = "toggle-feature-terraform-state-20"
     key            = "auth/terraform.tfstate"

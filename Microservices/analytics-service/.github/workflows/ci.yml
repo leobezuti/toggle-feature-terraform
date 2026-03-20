@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Analytics Service
+﻿name: CI/CD Pipeline for Analytics Service
 
 on:
   push:

@@ -1,11 +1,9 @@
-variable "repository_names" {
-  description = "List of ECR repository names to create"
+﻿variable "repository_names" {
   type        = list(string)
   default     = []
 }
 
 variable "tags" {
-  description = "Tags to apply to resources"
   type        = map(string)
   default     = {}
 }

@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Auth Service
+﻿name: CI/CD Pipeline for Auth Service
 
 on:
   push:
