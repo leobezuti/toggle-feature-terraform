@@ -14,8 +14,7 @@ spec:
         app: analytics-service
     spec:
       containers:
-        - name: analytics-service
-          image: 935451498002.dkr.ecr.us-east-1.amazonaws.com/toggle-feature/analytics-service:1.0.0
+        m0829113486.dkr.ecr.us-east-1.amazonaws.com/analytics-service:sha-665e4fb7a161
           imagePullPolicy: IfNotPresent
           resources:
             requests:
