@@ -5,6 +5,7 @@ import json
 import uuid
 import time
 import logging
+from urllib.parse import urlparse
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 from flask import Flask, jsonify
@@ -18,22 +19,53 @@ load_dotenv()
 AWS_REGION = os.getenv("AWS_REGION")
 SQS_QUEUE_URL = os.getenv("AWS_SQS_URL")
 DYNAMODB_TABLE_NAME = os.getenv("AWS_DYNAMODB_TABLE")
+SQS_ENDPOINT_URL = os.getenv("AWS_SQS_ENDPOINT")
+DYNAMODB_ENDPOINT_URL = os.getenv("AWS_DYNAMODB_ENDPOINT")
 
 if not all([AWS_REGION, SQS_QUEUE_URL, DYNAMODB_TABLE_NAME]):
     log.critical("Erro: AWS_REGION, AWS_SQS_URL, e AWS_DYNAMODB_TABLE devem ser definidos.")
     sys.exit(1)
 
 try:
-    session = boto3.Session(region_name=AWS_REGION)
-    sqs_client = session.client("sqs")
-    dynamodb_client = session.client("dynamodb")
+    session = boto3.Session(
+        region_name=AWS_REGION,
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        aws_session_token=os.getenv("AWS_SESSION_TOKEN"),
+    )
+    sqs_client = session.client("sqs", endpoint_url=SQS_ENDPOINT_URL)
+    dynamodb_client = session.client("dynamodb", endpoint_url=DYNAMODB_ENDPOINT_URL)
     log.info(f"Clientes Boto3 inicializados na regiÃ£o {AWS_REGION}")
+    if SQS_ENDPOINT_URL:
+        log.info(f"SQS endpoint local configurado: {SQS_ENDPOINT_URL}")
+    if DYNAMODB_ENDPOINT_URL:
+        log.info(f"DynamoDB endpoint local configurado: {DYNAMODB_ENDPOINT_URL}")
 except NoCredentialsError:
     log.critical("Credenciais da AWS nÃ£o encontradas. Verifique seu ambiente.")
     sys.exit(1)
 except Exception as e:
     log.critical(f"Erro ao inicializar o Boto3: {e}")
     sys.exit(1)
+
+
+def ensure_sqs_queue_exists(queue_url):
+    """Garante que a fila exista no broker local e retorna a QueueUrl efetiva."""
+    queue_name = urlparse(queue_url).path.rsplit('/', 1)[-1].strip()
+    if not queue_name:
+        log.critical(f"URL da fila SQS invÃ¡lida: {queue_url}")
+        sys.exit(1)
+
+    try:
+        sqs_client.create_queue(QueueName=queue_name)
+        resolved_queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
+        log.info(f"Fila SQS pronta para uso: {resolved_queue_url}")
+        return resolved_queue_url
+    except ClientError as e:
+        log.critical(f"NÃ£o foi possÃ­vel garantir a fila SQS '{queue_name}': {e}")
+        sys.exit(1)
+
+
+SQS_QUEUE_URL = ensure_sqs_queue_exists(SQS_QUEUE_URL)
 
 
 
