@@ -3,7 +3,7 @@ name: Microservices CI/CD
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - "Microservices/**"
   workflow_dispatch:
