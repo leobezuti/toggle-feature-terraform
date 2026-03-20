@@ -111,7 +111,7 @@ jobs:
           SERVICE="${{ matrix.service }}"
           SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-12)"
           TAG="sha-${SHORT_SHA}"
-          DEPLOYMENT_FILE="Kubernetes/${SERVICE}/deployment.yml"
+          DEPLOYMENT_FILE="GitOps/${SERVICE}/deployment.yml"
           REPOSITORY="${SERVICE}"
           CONTAINER_NAME="${SERVICE}"
 
@@ -133,7 +133,7 @@ jobs:
             "Microservices/${{ steps.image.outputs.service }}"
           docker push "${{ steps.image.outputs.image_uri }}"
 
-      - name: Update Kubernetes deployment image
+      - name: Update GitOps deployment image
         shell: bash
         run: |
           set -euo pipefail

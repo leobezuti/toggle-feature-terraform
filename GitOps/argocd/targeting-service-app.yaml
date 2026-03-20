@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/YOUR_USERNAME/toggle-feature-terraform
+    repoURL: https://github.com/leobezuti/toggle-feature-terraform
     path: GitOps/targeting-service
     targetRevision: HEAD
   destination:
