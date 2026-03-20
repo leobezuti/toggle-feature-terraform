@@ -14,7 +14,12 @@ spec:
         app: targeting-service
     spec:
       containers:
+<<<<<<< HEAD
         m0829113486.dkr.ecr.us-east-1.amazonaws.com/targeting-service:sha-42306ee98305
+=======
+        - name: targeting-service
+          image: 550829113486.dkr.ecr.us-east-1.amazonaws.com/targeting-service:sha-42306ee98305
+>>>>>>> c7a7dd9 (Arrumando muitos erros)
           imagePullPolicy: IfNotPresent
           resources:
             requests:

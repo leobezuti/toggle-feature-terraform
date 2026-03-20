@@ -14,7 +14,12 @@ spec:
         app: auth-service
     spec:
       containers:
+<<<<<<< HEAD
         m0829113486.dkr.ecr.us-east-1.amazonaws.com/auth-service:sha-42306ee98305
+=======
+        - name: auth-service
+          image: 550829113486.dkr.ecr.us-east-1.amazonaws.com/auth-service:sha-42306ee98305
+>>>>>>> c7a7dd9 (Arrumando muitos erros)
           imagePullPolicy: IfNotPresent
           resources:
             requests:
