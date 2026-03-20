@@ -175,4 +175,12 @@ jobs:
             exit 0
           fi
           git commit -m "ci: update ${{ steps.image.outputs.service }} image to ${{ steps.image.outputs.tag }}"
-          git push
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          for i in 1 2 3; do
+            if git push origin "${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+          done
+          echo "Failed to push manifest update after retries."
+          exit 1
