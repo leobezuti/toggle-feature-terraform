@@ -14,7 +14,8 @@ spec:
         app: targeting-service
     spec:
       containers:
-        m0829113486.dkr.ecr.us-east-1.amazonaws.com/targeting-service:sha-17da9ccb9c73
+        - name: targeting-service
+          image: 550829113486.dkr.ecr.us-east-1.amazonaws.com/targeting-service:sha-17da9ccb9c73
           imagePullPolicy: IfNotPresent
           resources:
             requests:
