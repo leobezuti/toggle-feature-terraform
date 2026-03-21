@@ -2,6 +2,7 @@
 import sys
 import psycopg2
 import requests
+from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
 from flask import Flask, request, jsonify
@@ -146,22 +147,24 @@ def update_flag(name):
     if not data:
         return jsonify({"error": "Corpo da requisiÃ§Ã£o obrigatÃ³rio"}), 400
 
-    fields = []
+    set_clauses = []
     values = []
     
     if 'description' in data:
-        fields.append("description = %s")
+        set_clauses.append(sql.SQL("description = %s"))
         values.append(data['description'])
     if 'is_enabled' in data:
-        fields.append("is_enabled = %s")
+        set_clauses.append(sql.SQL("is_enabled = %s"))
         values.append(data['is_enabled'])
     
-    if not fields:
+    if not set_clauses:
         return jsonify({"error": "Pelo menos um campo ('description', 'is_enabled') Ã© obrigatÃ³rio"}), 400
     
     values.append(name)
-    
-    query = f"UPDATE flags SET {', '.join(fields)} WHERE name = %s RETURNING *"
+
+    query = sql.SQL("UPDATE flags SET {set_clause} WHERE name = %s RETURNING *").format(
+        set_clause=sql.SQL(", ").join(set_clauses)
+    )
     
     conn = None
     cur = None
@@ -212,4 +215,4 @@ def delete_flag(name):
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 8002))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)  # nosec B104
