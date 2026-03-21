@@ -64,17 +64,17 @@ variable "enable_elastic_load_balancing" {
 
 variable "desired_size" {
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "max_size" {
   type        = number
-  default     = 4
+  default     = 2
 }
 
 variable "min_size" {
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "instance_type" {

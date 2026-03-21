@@ -1,17 +1,26 @@
-﻿provider "aws" {
+﻿# Analytics service infrastructure is now managed in global/infrastructure/main.tf
+# All shared resources (DynamoDB, VPC, EKS) are consolidated there
+# This file is kept for reference only
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.25"
+    }
+  }
+}
+
+provider "aws" {
   region = var.aws_region
 }
 
-module "analytics_service_dynamodb" {
-  source = "../../modules/dynamodb"
+data "terraform_remote_state" "global_infrastructure" {
+  backend = "s3"
 
-  table_name                     = var.table_name
-  hash_key                       = var.hash_key
-  hash_key_type                  = var.hash_key_type
-  billing_mode                   = var.billing_mode
-  read_capacity                  = var.read_capacity
-  write_capacity                 = var.write_capacity
-  ttl_attribute_name             = var.ttl_attribute_name
-  point_in_time_recovery_enabled = var.point_in_time_recovery_enabled
-  tags                           = var.tags
+  config = {
+    bucket = "toggle-feature-terraform-state-20"
+    key    = "global/infrastructure/terraform.tfstate"
+    region = var.aws_region
+  }
 }

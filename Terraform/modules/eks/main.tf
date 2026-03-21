@@ -10,7 +10,6 @@
   kubernetes_network_config {
   }
 
-
   compute_config {
     enabled = false
   }

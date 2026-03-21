@@ -1,19 +1,26 @@
-﻿provider "aws" {
+﻿# Flag service infrastructure is now managed in global/infrastructure/main.tf
+# All shared resources (RDS, VPC, EKS) are consolidated there
+# This file is kept for reference only
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.25"
+    }
+  }
+}
+
+provider "aws" {
   region = var.aws_region
 }
 
-module "flag_service_rds" {
-  source = "../../modules/rds"
+data "terraform_remote_state" "global_infrastructure" {
+  backend = "s3"
 
-  project_name       = var.project_name
-  vpc_id             = var.vpc_id
-  vpc_cidr           = var.vpc_cidr
-  private_subnet_ids = var.private_subnet_ids
-  db_identifier      = var.db_identifier
-  db_name            = var.db_name
-  db_username        = var.db_username
-  db_engine_version  = var.db_engine_version
-  instance_class     = var.instance_class
-  allocated_storage  = var.allocated_storage
-  tags               = var.tags
+  config = {
+    bucket = "toggle-feature-terraform-state-20"
+    key    = "global/infrastructure/terraform.tfstate"
+    region = var.aws_region
+  }
 }

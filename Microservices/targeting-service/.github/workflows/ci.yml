@@ -81,6 +81,8 @@ jobs:
       with:
         scan-type: 'fs'
         scan-ref: 'Microservices/targeting-service'
+        severity: 'CRITICAL'
+        exit-code: '1'
         format: 'sarif'
         output: 'trivy-results.sarif'
 
@@ -137,6 +139,8 @@ jobs:
       with:
         scan-type: 'image'
         scan-ref: '${{ steps.login-ecr.outputs.registry }}/targeting-service:${{ github.sha }}'
+        severity: 'CRITICAL'
+        exit-code: '1'
         format: 'sarif'
         output: 'trivy-image-results.sarif'
 

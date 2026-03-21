@@ -62,15 +62,17 @@ jobs:
         go-version: '1.21'
 
     - name: Run Gosec Security Scanner
-      uses: securecodewarrior/github-action-gosec@master
-      with:
-        args: './...'
+      run: |
+        go install github.com/securego/gosec/v2/cmd/gosec@latest
+        gosec ./...
 
     - name: Run Trivy filesystem scan
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'fs'
         scan-ref: '.'
+        severity: 'CRITICAL'
+        exit-code: '1'
         format: 'sarif'
         output: 'trivy-results.sarif'
 
@@ -127,6 +129,8 @@ jobs:
       with:
         scan-type: 'image'
         scan-ref: '${{ steps.login-ecr.outputs.registry }}/auth-service:${{ github.sha }}'
+        severity: 'CRITICAL'
+        exit-code: '1'
         format: 'sarif'
         output: 'trivy-image-results.sarif'
 
