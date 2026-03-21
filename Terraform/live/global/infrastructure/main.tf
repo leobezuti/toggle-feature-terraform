@@ -250,6 +250,8 @@ module "redis" {
   port              = 6379
   subnet_group_name = "redis-subnet-group"
   subnet_ids        = module.vpc.private_subnet_ids_list
+  vpc_id            = module.vpc.vpc_id
+  vpc_cidr          = var.vpc_cidr
 
   tags = var.tags
 }

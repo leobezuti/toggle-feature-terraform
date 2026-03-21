@@ -12,7 +12,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: flag-service
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data
+        - /stringData
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true

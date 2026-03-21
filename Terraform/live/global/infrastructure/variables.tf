@@ -64,7 +64,7 @@ variable "enable_elastic_load_balancing" {
 
 variable "desired_size" {
   type        = number
-  default     = 2
+  default     = 3
 }
 
 variable "max_size" {

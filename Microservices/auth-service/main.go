@@ -38,6 +38,9 @@ func main() {
 		log.Fatalf("NÃ£o foi possÃ­vel conectar ao banco de dados: %v", err)
 	}
 	defer db.Close()
+	if err := ensureSchema(db); err != nil {
+		log.Fatalf("NÃ£o foi possÃ­vel preparar o schema do banco: %v", err)
+	}
 
 	app := &App{
 		DB:         db,
@@ -69,4 +72,20 @@ func connectDB(databaseURL string) (*sql.DB, error) {
 
 	log.Println("Conectado ao PostgreSQL com sucesso!")
 	return db, nil
+}
+
+func ensureSchema(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS api_keys (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(100) NOT NULL,
+			key_hash VARCHAR(64) NOT NULL UNIQUE,
+			is_active BOOLEAN DEFAULT true,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err == nil {
+		log.Println("Schema do auth-service verificado com sucesso.")
+	}
+	return err
 }
