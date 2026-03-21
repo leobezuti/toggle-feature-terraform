@@ -14,7 +14,8 @@ spec:
         app: flag-service
     spec:
       containers:
-        m0829113486.dkr.ecr.us-east-1.amazonaws.com/flag-service:sha-d3260d50a105
+        - name: flag-service
+          image: 550829113486.dkr.ecr.us-east-1.amazonaws.com/flag-service:sha-d3260d50a105
           imagePullPolicy: IfNotPresent
           resources:
             requests:
