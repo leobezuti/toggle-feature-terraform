@@ -1,4 +1,4 @@
-﻿name: Microservices CI/CD
+name: Microservices CI/CD
 
 on:
   push:
@@ -196,13 +196,28 @@ jobs:
           echo "container_name=${CONTAINER_NAME}" >> "$GITHUB_OUTPUT"
           echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push image
+      - name: Build image
         shell: bash
         run: |
           set -euo pipefail
           docker build \
             -t "${{ steps.image.outputs.image_uri }}" \
             "Microservices/${{ steps.image.outputs.service }}"
+
+      - name: Scan container image with Trivy
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ steps.image.outputs.image_uri }}
+          format: table
+          exit-code: "1"
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Push image
+        shell: bash
+        run: |
+          set -euo pipefail
           docker push "${{ steps.image.outputs.image_uri }}"
 
       - name: Update GitOps deployment image
