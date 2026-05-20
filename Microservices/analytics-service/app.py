@@ -34,6 +34,7 @@ _otel_provider.add_span_processor(BatchSpanProcessor(_otel_exporter))
 trace.set_tracer_provider(_otel_provider)
 
 AWS_REGION = os.getenv("AWS_REGION")
+
 SQS_QUEUE_URL = os.getenv("AWS_SQS_URL")
 DYNAMODB_TABLE_NAME = os.getenv("AWS_DYNAMODB_TABLE")
 SQS_ENDPOINT_URL = os.getenv("AWS_SQS_ENDPOINT")
