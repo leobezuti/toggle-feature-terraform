@@ -1,0 +1,121 @@
+name: Self-Healing Runbook
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service to restart (e.g. auth-service)"
+        required: true
+        default: "auth-service"
+      namespace:
+        description: "Kubernetes namespace"
+        required: true
+        default: "auth-service"
+      reason:
+        description: "Reason for manual trigger"
+        required: false
+        default: "Manual self-healing trigger"
+  repository_dispatch:
+    types: [self-heal]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+
+jobs:
+  self-heal:
+    name: Rollout Restart - ${{ github.event.inputs.service || github.event.client_payload.service }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve inputs
+        id: inputs
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "service=${{ github.event.client_payload.service }}" >> "$GITHUB_OUTPUT"
+            echo "namespace=${{ github.event.client_payload.namespace || github.event.client_payload.service }}" >> "$GITHUB_OUTPUT"
+            echo "reason=Triggered by alert: ${{ github.event.client_payload.alertname }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "service=${{ github.event.inputs.service }}" >> "$GITHUB_OUTPUT"
+            echo "namespace=${{ github.event.inputs.namespace }}" >> "$GITHUB_OUTPUT"
+            echo "reason=${{ github.event.inputs.reason }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Check current deployment status
+        run: |
+          echo "=== Pre-heal status ==="
+          kubectl get pods -n ${{ steps.inputs.outputs.namespace }} --no-headers || echo "Namespace not found"
+          kubectl get deployment ${{ steps.inputs.outputs.service }} \
+            -n ${{ steps.inputs.outputs.namespace }} \
+            -o jsonpath='{.status}' 2>/dev/null | python3 -m json.tool || true
+
+      - name: Execute rollout restart
+        run: |
+          echo "Triggering rollout restart for ${{ steps.inputs.outputs.service }} in ${{ steps.inputs.outputs.namespace }}"
+          echo "Reason: ${{ steps.inputs.outputs.reason }}"
+          kubectl rollout restart \
+            deployment/${{ steps.inputs.outputs.service }} \
+            -n ${{ steps.inputs.outputs.namespace }}
+
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status \
+            deployment/${{ steps.inputs.outputs.service }} \
+            -n ${{ steps.inputs.outputs.namespace }} \
+            --timeout=300s
+
+      - name: Check post-heal status
+        run: |
+          echo "=== Post-heal status ==="
+          kubectl get pods -n ${{ steps.inputs.outputs.namespace }}
+
+      - name: Notify Discord on success
+        if: success()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "✅ Self-Healing Concluído",
+                "color": 3066993,
+                "fields": [
+                  {"name": "Serviço", "value": "${{ steps.inputs.outputs.service }}", "inline": true},
+                  {"name": "Namespace", "value": "${{ steps.inputs.outputs.namespace }}", "inline": true},
+                  {"name": "Motivo", "value": "${{ steps.inputs.outputs.reason }}"},
+                  {"name": "Acionado por", "value": "${{ github.actor }}"},
+                  {"name": "Run", "value": "[Ver logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"}
+                ]
+              }]
+            }'
+
+      - name: Notify Discord on failure
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "❌ Self-Healing FALHOU",
+                "color": 15158332,
+                "fields": [
+                  {"name": "Serviço", "value": "${{ steps.inputs.outputs.service }}", "inline": true},
+                  {"name": "Namespace", "value": "${{ steps.inputs.outputs.namespace }}", "inline": true},
+                  {"name": "Run", "value": "[Ver logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"}
+                ]
+              }]
+            }'

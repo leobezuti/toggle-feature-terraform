@@ -11,12 +11,34 @@ from dotenv import load_dotenv
 from functools import wraps
 import logging
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.semconv.resource import ResourceAttributes
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-load_dotenv() 
+load_dotenv()
+
+_otel_resource = Resource.create({ResourceAttributes.SERVICE_NAME: "targeting-service"})
+_otel_exporter = OTLPSpanExporter(
+    endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector.monitoring.svc.cluster.local:4317"),
+    insecure=True,
+)
+_otel_provider = TracerProvider(resource=_otel_resource)
+_otel_provider.add_span_processor(BatchSpanProcessor(_otel_exporter))
+trace.set_tracer_provider(_otel_provider)
+RequestsInstrumentor().instrument()
+Psycopg2Instrumentor().instrument()
 
 app = Flask(__name__)
+FlaskInstrumentor().instrument_app(app)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL")

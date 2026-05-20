@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: self-healing-controller
+  namespace: monitoring
+  labels:
+    app: self-healing-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: self-healing-controller
+  template:
+    metadata:
+      labels:
+        app: self-healing-controller
+    spec:
+      serviceAccountName: self-healing-sa
+      containers:
+        - name: controller
+          image: python:3.11-slim
+          command: ["sh", "-c"]
+          args:
+            - |
+              pip install kubernetes --quiet && python /scripts/server.py
+          ports:
+            - containerPort: 9000
+              name: webhook
+          env:
+            - name: PORT
+              value: "9000"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: scripts
+          configMap:
+            name: self-healing-script

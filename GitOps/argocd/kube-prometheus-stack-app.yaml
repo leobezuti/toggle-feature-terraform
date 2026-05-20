@@ -1,0 +1,95 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: "65.2.0"
+    helm:
+      values: |
+        prometheus:
+          prometheusSpec:
+            enableRemoteWriteReceiver: true
+            retention: 15d
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                cpu: 500m
+                memory: 1Gi
+
+        grafana:
+          adminPassword: "admin"
+          sidecar:
+            dashboards:
+              enabled: true
+              searchNamespace: ALL
+              label: grafana_dashboard
+              labelValue: "1"
+            alerts:
+              enabled: true
+              searchNamespace: ALL
+              label: grafana_alert
+              labelValue: "1"
+          grafana.ini:
+            unified_alerting:
+              enabled: true
+            alerting:
+              enabled: false
+
+        alertmanager:
+          config:
+            global:
+              resolve_timeout: 5m
+            receivers:
+              - name: "pagerduty-discord"
+                pagerduty_configs:
+                  - routing_key: "${PAGERDUTY_ROUTING_KEY}"
+                    description: "{{ .CommonAnnotations.summary }}"
+                    severity: "critical"
+                discord_configs:
+                  - webhook_url: "${DISCORD_WEBHOOK_URL}"
+                    title: "🚨 [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}"
+                    message: "{{ range .Alerts }}**Service:** {{ .Labels.namespace }}\n**Summary:** {{ .Annotations.summary }}\n**Description:** {{ .Annotations.description }}\n{{ end }}"
+              - name: "self-healing"
+                webhook_configs:
+                  - url: "http://self-healing-controller.monitoring.svc.cluster.local:9000/webhook"
+                    send_resolved: false
+            route:
+              group_by: ["alertname", "namespace"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 1h
+              receiver: "pagerduty-discord"
+              routes:
+                - matchers:
+                    - name: severity
+                      value: critical
+                  receiver: "pagerduty-discord"
+                  continue: true
+                - matchers:
+                    - name: alertname
+                      value: ServiceHighErrorRate
+                  receiver: "self-healing"
+
+        kubeStateMetrics:
+          enabled: true
+
+        nodeExporter:
+          enabled: true
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: 550829113486.dkr.ecr.us-east-1.amazonaws.com/auth-service:sha-17da9ccb9c73
-        imagePullPolicy: IfNotPresent
+        image: microservices-auth-service:latest
+        imagePullPolicy: Never
         resources:
           requests:
             memory: "64Mi"

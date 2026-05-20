@@ -11,10 +11,27 @@ from botocore.exceptions import NoCredentialsError, ClientError
 from flask import Flask, jsonify
 from dotenv import load_dotenv
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.semconv.resource import ResourceAttributes
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
 load_dotenv()
+
+_otel_resource = Resource.create({ResourceAttributes.SERVICE_NAME: "analytics-service"})
+_otel_exporter = OTLPSpanExporter(
+    endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector.monitoring.svc.cluster.local:4317"),
+    insecure=True,
+)
+_otel_provider = TracerProvider(resource=_otel_resource)
+_otel_provider.add_span_processor(BatchSpanProcessor(_otel_exporter))
+trace.set_tracer_provider(_otel_provider)
 
 AWS_REGION = os.getenv("AWS_REGION")
 SQS_QUEUE_URL = os.getenv("AWS_SQS_URL")
@@ -133,6 +150,7 @@ def sqs_worker_loop():
 
 
 app = Flask(__name__)
+FlaskInstrumentor().instrument_app(app)
 
 @app.route('/health')
 def health():

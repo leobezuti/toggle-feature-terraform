@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var ctx = context.Background()
@@ -27,6 +28,9 @@ type App struct {
 
 func main() {
 	_ = godotenv.Load()
+
+	shutdown := initTracer()
+	defer shutdown()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -92,8 +96,8 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", app.healthHandler)
-	mux.HandleFunc("/evaluate", app.evaluationHandler)
+	mux.Handle("/health", otelhttp.NewHandler(http.HandlerFunc(app.healthHandler), "health"))
+	mux.Handle("/evaluate", otelhttp.NewHandler(http.HandlerFunc(app.evaluationHandler), "evaluate"))
 
 	log.Printf("ServiÃ§o de AvaliaÃ§Ã£o (Go) rodando na porta %s", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {

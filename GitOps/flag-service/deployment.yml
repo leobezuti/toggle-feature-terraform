@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flag-service-deployment
@@ -14,12 +14,13 @@ spec:
         app: flag-service
     spec:
       containers:
-        m0829113486.dkr.ecr.us-east-1.amazonaws.com/flag-service:sha-dd867d8a9fb8
-          imagePullPolicy: IfNotPresent
+        - name: flag-service
+          image: microservices-flag-service:latest
+          imagePullPolicy: Never
           resources:
             requests:
-              memory: "64Mi" 
-              cpu: "250m"   
+              memory: "64Mi"
+              cpu: "250m"
             limits:
               memory: "128Mi"
               cpu: "500m"
@@ -29,13 +30,12 @@ spec:
             - name: AUTH_SERVICE_URL
               valueFrom:
                 configMapKeyRef:
-                  name: flag-service-configmap 
+                  name: flag-service-configmap
                   key: AUTH_SERVICE_URL
           envFrom:
-            - secretRef: 
+            - secretRef:
                 name: flag-service-secret
           startupProbe:
             httpGet: { path: /health, port: 8002 }
             periodSeconds: 5
             failureThreshold: 6
-

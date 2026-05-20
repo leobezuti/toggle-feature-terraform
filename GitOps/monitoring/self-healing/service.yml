@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: self-healing-controller
+  namespace: monitoring
+  labels:
+    app: self-healing-controller
+spec:
+  selector:
+    app: self-healing-controller
+  ports:
+    - name: webhook
+      port: 9000
+      targetPort: 9000
+  type: ClusterIP

@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/joho/godotenv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type App struct {
@@ -17,6 +18,9 @@ type App struct {
 
 func main() {
 	_ = godotenv.Load()
+
+	shutdown := initTracer()
+	defer shutdown()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -48,11 +52,9 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", app.healthHandler)
-
-	mux.HandleFunc("/validate", app.validateKeyHandler)
-
-	mux.Handle("/admin/keys", app.masterKeyAuthMiddleware(http.HandlerFunc(app.createKeyHandler)))
+	mux.Handle("/health", otelhttp.NewHandler(http.HandlerFunc(app.healthHandler), "health"))
+	mux.Handle("/validate", otelhttp.NewHandler(http.HandlerFunc(app.validateKeyHandler), "validate"))
+	mux.Handle("/admin/keys", otelhttp.NewHandler(app.masterKeyAuthMiddleware(http.HandlerFunc(app.createKeyHandler)), "admin.keys"))
 
 	log.Printf("ServiÃ§o de AutenticaÃ§Ã£o (Go) rodando na porta %s", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {

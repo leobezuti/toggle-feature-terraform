@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alert-provisioning
+  namespace: monitoring
+  labels:
+    grafana_alert: "1"
+data:
+  contact-points.yaml: |
+    apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: PagerDuty
+        receivers:
+          - uid: pagerduty-receiver
+            type: pagerduty
+            settings:
+              integrationKey: "${PAGERDUTY_ROUTING_KEY}"
+              severity: critical
+              class: togglemaster
+              component: "{{ .CommonLabels.namespace }}"
+              group: "ToggleMaster"
+
+      - orgId: 1
+        name: Discord
+        receivers:
+          - uid: discord-receiver
+            type: discord
+            settings:
+              url: "${DISCORD_WEBHOOK_URL}"
+              title: "🚨 [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}"
+              message: |
+                **Alerta:** {{ .CommonAnnotations.summary }}
+                **Serviço:** {{ .CommonLabels.namespace }}
+                **Descrição:** {{ .CommonAnnotations.description }}
+                **Severidade:** {{ .CommonLabels.severity }}
+                **Horário:** {{ (index .Alerts 0).StartsAt.Format "2006-01-02 15:04:05" }}
+
+  notification-policies.yaml: |
+    apiVersion: 1
+    policies:
+      - orgId: 1
+        receiver: PagerDuty
+        group_by: ["alertname", "namespace"]
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 1h
+        routes:
+          - receiver: Discord
+            matchers:
+              - alertname =~ ".*"
+            continue: true
+
+  alert-rules.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: ToggleMaster Alerts
+        folder: ToggleMaster
+        interval: 1m
+        rules:
+          - uid: auth-service-restarts
+            title: "Auth Service - Alta Taxa de Reinicializações"
+            condition: C
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                model:
+                  expr: |
+                    sum(rate(kube_pod_container_status_restarts_total{
+                      namespace="auth-service"
+                    }[5m])) * 60
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  instant: true
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params: [0.1]
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params: [A]
+                      reducer:
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 2m
+            annotations:
+              summary: "auth-service está reiniciando com frequência"
+              description: "Taxa de restarts > 0.1/min no auth-service. Self-healing será acionado."
+            labels:
+              severity: critical
+              namespace: auth-service
+            isPaused: false
