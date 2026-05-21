@@ -5,6 +5,10 @@ metadata:
   namespace: monitoring
 data:
   config.yml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
     receivers:
       otlp:
         protocols:
@@ -35,12 +39,13 @@ data:
           insecure: true
 
       loki:
-        endpoint: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+        endpoint: http://loki-stack.monitoring.svc.cluster.local:3100/loki/api/v1/push
         default_labels_enabled:
           exporter: false
           job: true
 
     service:
+      extensions: [health_check]
       pipelines:
         traces:
           receivers: [otlp]
